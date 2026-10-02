@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Area Man Chemicals - Stock</title>
+<style>
+  :root {
+    --chalk: #f2f4ef;
+    --paper: #ffffff;
+    --ink: #14201c;
+    --muted: #5d6b65;
+    --line: #d5dbd4;
+    --drum: #1f4e79;
+    --amber: #e8a317;
+    --red: #c0392b;
+    --green: #2e7d4f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--chalk);
+    color: var(--ink);
+    font-family: "Trebuchet MS", "Segoe UI", Roboto, sans-serif;
+    line-height: 1.45;
+  }
+  header {
+    background: var(--drum);
+    color: #fff;
+    padding: 20px 16px 18px;
+    border-bottom: 6px solid var(--amber);
+  }
+  header h1 { margin: 0; font-size: 1.7rem; letter-spacing: 0.5px; }
+  header p { margin: 4px 0 0; opacity: 0.85; font-size: 0.95rem; }
+  main { max-width: 960px; margin: 0 auto; padding: 16px; }
+
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .summary div {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px;
+  }
+  .summary strong { display: block; font-size: 1.25rem; }
+  .summary span { font-size: 0.8rem; color: var(--muted); }
+  .summary .warn strong { color: var(--red); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .toolbar input[type="search"] { flex: 1 1 180px; }
+  input, select, button {
+    font: inherit;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  button { cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 3px solid var(--amber);
+    outline-offset: 1px;
+  }
+  .primary { background: var(--drum); color: #fff; border-color: var(--drum); font-weight: bold; }
+  .danger { color: var(--red); border-color: var(--red); }
+
+  .list { display: grid; gap: 12px; }
+  .item {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-left: 10px solid var(--hazard, var(--line));
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .item h3 { margin: 0; font-size: 1.1rem; }
+  .tag {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    background: var(--chalk);
+    border: 1px solid var(--line);
+  }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 10px 0; }
+  .facts b { display: block; font-size: 1.05rem; }
+  .facts span { font-size: 0.8rem; color: var(--muted); }
+  .status-low { color: #9a6700; font-weight: bold; }
+  .status-out { color: var(--red); font-weight: bold; }
+  .status-ok { color: var(--green); font-weight: bold; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .actions input[type="number"] { width: 84px; }
+  .empty {
+    text-align: center;
+    padding: 36px 16px;
+    background: var(--paper);
+    border: 2px dashed var(--line);
+    border-radius: 6px;
+    color: var(--muted);
+  }
+
+  dialog {
+    border: none;
+    border-radius: 8px;
+    padding: 20px;
+    width: min(94vw, 440px);
+  }
+  dialog::backdrop { background: rgba(20, 32, 28, 0.55); }
+  dialog h2 { margin-top: 0; }
+  label { display: block; margin-bottom: 12px; font-size: 0.9rem; color: var(--muted); }
+  label input, label select { display: block; width: 100%; margin-top: 4px; color: var(--ink); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dialog-buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    max-width: 90vw;
+  }
+  #toast.show { opacity: 1; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tabs button { flex: 1; font-weight: bold; }
+  .tabs button.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .sale {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-left: 10px solid var(--green);
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+  .sale small { display: block; color: var(--muted); }
+  .sale .amount { text-align: right; font-weight: bold; white-space: nowrap; }
+  [hidden] { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #toast { transition: none; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    header { background: none; color: #000; border-bottom: 2px solid #000; }
+    .tabs, .toolbar, .actions, #toast { display: none !important; }
+    .item, .sale { break-inside: avoid; }
+  }
+
+  /* ----- Cover screen ----- */
+  #cover {
+    position: fixed; inset: 0; z-index: 1000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px; text-align: center; color: #fff;
+    background:
+      radial-gradient(circle at 50% 30%, #2b6aa3 0%, var(--drum) 45%, #0f2c47 100%);
+    transition: opacity 0.5s, transform 0.5s;
+  }
+  #cover.hide { opacity: 0; transform: scale(1.04); pointer-events: none; }
+  #cover::before, #cover::after {
+    content: ""; position: absolute; left: 0; right: 0; height: 22px;
+    background: repeating-linear-gradient(-45deg, var(--amber) 0 18px, #14201c 18px 36px);
+  }
+  #cover::before { top: 0; }
+  #cover::after { bottom: 0; }
+  #cover svg { width: min(62vw, 250px); height: auto; filter: drop-shadow(0 10px 18px rgba(0,0,0,0.35)); }
+  #cover h1 { margin: 6px 0 0; font-size: clamp(2rem, 9vw, 3rem); line-height: 1.05; letter-spacing: 1px; }
+  #cover p { margin: 0; font-size: 1.05rem; opacity: 0.9; }
+  #cover .bar { width: min(60vw, 240px); height: 6px; border-radius: 3px; background: rgba(255,255,255,0.25); overflow: hidden; margin-top: 10px; }
+  #cover .bar i { display: block; height: 100%; width: 0; background: var(--amber); animation: load 1.8s ease-out forwards; }
+  #cover button { margin-top: 6px; background: var(--amber); color: var(--ink); border-color: var(--amber); font-weight: bold; padding: 12px 34px; font-size: 1.05rem; }
+  @keyframes load { to { width: 100%; } }
+  @media (prefers-reduced-motion: reduce) {
+    #cover { transition: none; }
+    #cover .bar i { animation: none; width: 100%; }
+  }
+  @media print { #cover { display: none !important; } }
+</style>
+</head>
+<body>
+
+<div id="cover" role="dialog" aria-label="Area Man Chemicals">
+  <svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="42" y="42" width="156" height="156" rx="14" transform="rotate(45 120 120)" fill="#e8a317" stroke="#14201c" stroke-width="8"/>
+    <rect x="58" y="58" width="124" height="124" rx="8" transform="rotate(45 120 120)" fill="none" stroke="#14201c" stroke-width="3"/>
+    <path d="M104 62h32v10h-5v36l32 56a10 10 0 0 1-9 15H86a10 10 0 0 1-9-15l32-56V72h-5z" fill="#fff" stroke="#14201c" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M90 140h60l12 21a5 5 0 0 1-4 8H82a5 5 0 0 1-4-8z" fill="#2e7d4f"/>
+    <circle cx="112" cy="152" r="4" fill="#fff"/><circle cx="128" cy="147" r="3" fill="#fff"/><circle cx="122" cy="132" r="3" fill="#fff" opacity="0.8"/>
+  </svg>
+  <h1>Area Man<br>Chemicals</h1>
+  <p>Stock and sales manager</p>
+  <div class="bar"><i></i></div>
+  <button id="openApp">Open app</button>
+</div>
+<script>
+  document.getElementById("openApp").addEventListener("click", function () {
+    var cover = document.getElementById("cover");
+    cover.classList.add("hide");
+    setTimeout(function () { cover.style.display = "none"; }, 500);
+  });
+</script>
+
+<header>
+  <h1>Area Man Chemicals</h1>
+  <p>Shop stock list</p>
+</header>
+
+<main>
+  <nav class="tabs">
+    <button id="tabStock" class="active">Stock</button>
+    <button id="tabSales">Sales</button>
+  </nav>
+
+  <div id="stockView">
+  <section class="summary" aria-label="Summary">
+    <div><strong id="sumItems">0</strong><span>Products</span></div>
+    <div class="warn"><strong id="sumLow">0</strong><span>Low or out of stock</span></div>
+    <div><strong id="sumValue">0</strong><span>Total stock value</span></div>
+  </section>
+
+  <section class="toolbar">
+    <input type="search" id="search" placeholder="Search product name" aria-label="Search product name">
+    <select id="filter" aria-label="Filter products">
+      <option value="all">All products</option>
+      <option value="low">Low stock</option>
+      <option value="out">Out of stock</option>
+    </select>
+    <button class="primary" id="addBtn">Add product</button>
+    <button id="printBtn">Print</button>
+  </section>
+
+  <section class="list" id="list" aria-live="polite"></section>
+  </div>
+
+  <div id="salesView" hidden>
+    <section class="summary" aria-label="Sales summary" style="grid-template-columns: 1fr 1fr;">
+      <div><strong id="salesTotal">0</strong><span>Money from sales</span></div>
+      <div><strong id="salesCount">0</strong><span>Number of sales</span></div>
+    </section>
+
+    <section class="toolbar">
+      <select id="salesRange" aria-label="Choose sales period">
+        <option value="today">Today</option>
+        <option value="all">All sales</option>
+      </select>
+      <button id="printSalesBtn">Print</button>
+      <button class="danger" id="clearSalesBtn">Clear sales</button>
+    </section>
+
+    <section class="list" id="salesList" aria-live="polite"></section>
+  </div>
+</main>
+
+<dialog id="dialog">
+  <form id="form">
+    <h2 id="dialogTitle">Add product</h2>
+    <input type="hidden" id="itemId">
+
+    <label>Product name
+      <input type="text" id="name" required maxlength="60" placeholder="Example: Caustic soda">
+    </label>
+
+    <div class="row">
+      <label>Hazard type
+        <select id="hazard">
+          <option value="None">None</option>
+          <option value="Flammable">Flammable</option>
+          <option value="Corrosive">Corrosive</option>
+          <option value="Toxic">Toxic</option>
+          <option value="Oxidizer">Oxidizer</option>
+          <option value="Irritant">Irritant</option>
+        </select>
+      </label>
+      <label>Unit
+        <select id="unit">
+          <option>kg</option>
+          <option>litre</option>
+          <option>bag</option>
+          <option>bottle</option>
+          <option>drum</option>
+          <option>piece</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="row">
+      <label>Quantity in stock
+        <input type="number" id="qty" min="0" step="any" required value="0">
+      </label>
+      <label>Price per unit
+        <input type="number" id="price" min="0" step="any" required value="0">
+      </label>
+    </div>
+
+    <label>Warn me when stock is this low or less
+      <input type="number" id="low" min="0" step="any" required value="5">
+    </label>
+
+    <div class="dialog-buttons">
+      <button type="button" id="cancelBtn">Cancel</button>
+      <button type="submit" class="primary">Save product</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" role="status"></div>
+
+<script>
+  // ----- Settings you can change -----
+  var CURRENCY = "GH\u20B5 ";          // change this to your money sign
+  var STORAGE_KEY = "areaManChemicalsStock";
+
+  // Colour for each hazard type
+  var HAZARD_COLORS = {
+    "None": "#d5dbd4",
+    "Flammable": "#d9531e",
+    "Corrosive": "#6b4c9a",
+    "Toxic": "#c0392b",
+    "Oxidizer": "#e8a317",
+    "Irritant": "#2a8fa8"
+  };
+
+  // ----- Data -----
+  var items = [];
+  var sales = [];
+  var SALES_KEY = "areaManChemicalsSales";
+
+  function loadSales() {
+    try {
+      var saved = localStorage.getItem(SALES_KEY);
+      sales = saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      sales = [];
+    }
+  }
+
+  function saveSales() {
+    try {
+      localStorage.setItem(SALES_KEY, JSON.stringify(sales));
+    } catch (e) {
+      showToast("Could not save the sale.");
+    }
+  }
+
+  function loadItems() {
+    try {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      items = saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      items = [];
+    }
+  }
+
+  function saveItems() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch (e) {
+      showToast("Could not save. Open this page in your phone browser.");
+    }
+  }
+
+  // ----- Helpers -----
+  function money(n) {
+    return CURRENCY + Number(n).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function escapeHtml(text) {
+    var div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function stockStatus(item) {
+    if (item.qty <= 0) return "out";
+    if (item.qty <= item.low) return "low";
+    return "ok";
+  }
+
+  var toastTimer;
+  function showToast(message) {
+    var toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      toast.classList.remove("show");
+    }, 2500);
+  }
+
+  // ----- Show the list -----
+  function render() {
+    var text = document.getElementById("search").value.trim().toLowerCase();
+    var filter = document.getElementById("filter").value;
+    var list = document.getElementById("list");
+
+    var shown = items.filter(function (item) {
+      var matchName = item.name.toLowerCase().indexOf(text) !== -1;
+      var status = stockStatus(item);
+      var matchFilter =
+        filter === "all" ||
+        (filter === "low" && status === "low") ||
+        (filter === "out" && status === "out");
+      return matchName && matchFilter;
+    });
+
+    // Summary numbers
+    var totalValue = 0;
+    var lowCount = 0;
+    items.forEach(function (item) {
+      totalValue += item.qty * item.price;
+      if (stockStatus(item) !== "ok") lowCount++;
+    });
+    document.getElementById("sumItems").textContent = items.length;
+    document.getElementById("sumLow").textContent = lowCount;
+    document.getElementById("sumValue").textContent = money(totalValue);
+
+    // Empty messages
+    if (items.length === 0) {
+      list.innerHTML = '<div class="empty">No products yet. Tap "Add product" to add your first chemical.</div>';
+      return;
+    }
+    if (shown.length === 0) {
+      list.innerHTML = '<div class="empty">No product matches your search.</div>';
+      return;
+    }
+
+    list.innerHTML = shown.map(function (item) {
+      var status = stockStatus(item);
+      var statusText = status === "out" ? "Out of stock" : status === "low" ? "Low stock" : "In stock";
+      var color = HAZARD_COLORS[item.hazard] || HAZARD_COLORS["None"];
+      return (
+        '<article class="item" style="--hazard:' + color + '">' +
+          '<h3>' + escapeHtml(item.name) + '</h3>' +
+          '<span class="tag">Hazard: ' + escapeHtml(item.hazard) + '</span>' +
+          '<div class="facts">' +
+            '<div><b>' + item.qty + ' ' + escapeHtml(item.unit) + '</b><span>In stock</span></div>' +
+            '<div><b>' + money(item.price) + '</b><span>Price per ' + escapeHtml(item.unit) + '</span></div>' +
+            '<div><b>' + money(item.qty * item.price) + '</b><span>Stock value</span></div>' +
+            '<div><b class="status-' + status + '">' + statusText + '</b><span>Status</span></div>' +
+          '</div>' +
+          '<div class="actions">' +
+            '<input type="number" min="0" step="any" value="1" id="amt-' + item.id + '" aria-label="Amount">' +
+            '<button data-act="in" data-id="' + item.id + '">Stock in</button>' +
+            '<button data-act="out" data-id="' + item.id + '">Sell</button>' +
+            '<button data-act="edit" data-id="' + item.id + '">Edit</button>' +
+            '<button class="danger" data-act="delete" data-id="' + item.id + '">Delete</button>' +
+          '</div>' +
+        '</article>'
+      );
+    }).join("");
+  }
+
+  // ----- Add and edit -----
+  var dialog = document.getElementById("dialog");
+  var form = document.getElementById("form");
+
+  function openForm(item) {
+    form.reset();
+    document.getElementById("itemId").value = item ? item.id : "";
+    document.getElementById("dialogTitle").textContent = item ? "Edit product" : "Add product";
+    if (item) {
+      document.getElementById("name").value = item.name;
+      document.getElementById("hazard").value = item.hazard;
+      document.getElementById("unit").value = item.unit;
+      document.getElementById("qty").value = item.qty;
+      document.getElementById("price").value = item.price;
+      document.getElementById("low").value = item.low;
+    }
+    dialog.showModal();
+  }
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var id = document.getElementById("itemId").value;
+    var data = {
+      name: document.getElementById("name").value.trim(),
+      hazard: document.getElementById("hazard").value,
+      unit: document.getElementById("unit").value,
+      qty: Number(document.getElementById("qty").value),
+      price: Number(document.getElementById("price").value),
+      low: Number(document.getElementById("low").value)
+    };
+
+    if (id) {
+      var item = items.find(function (i) { return String(i.id) === id; });
+      Object.assign(item, data);
+      showToast("Product updated");
+    } else {
+      data.id = Date.now();
+      items.push(data);
+      showToast("Product added");
+    }
+
+    saveItems();
+    dialog.close();
+    render();
+  });
+
+  document.getElementById("addBtn").addEventListener("click", function () { openForm(null); });
+  document.getElementById("cancelBtn").addEventListener("click", function () { dialog.close(); });
+
+  // ----- Buttons on each product -----
+  document.getElementById("list").addEventListener("click", function (event) {
+    var button = event.target.closest("button");
+    if (!button) return;
+
+    var id = button.getAttribute("data-id");
+    var act = button.getAttribute("data-act");
+    var item = items.find(function (i) { return String(i.id) === id; });
+    if (!item) return;
+
+    if (act === "in" || act === "out") {
+      var amount = Number(document.getElementById("amt-" + id).value);
+      if (!(amount > 0)) {
+        showToast("Type an amount more than 0");
+        return;
+      }
+      if (act === "out" && amount > item.qty) {
+        showToast("You only have " + item.qty + " " + item.unit + " in stock");
+        return;
+      }
+      if (act === "out") {
+        sales.push({
+          id: Date.now(),
+          date: new Date().toISOString(),
+          name: item.name,
+          unit: item.unit,
+          amount: amount,
+          price: item.price,
+          total: amount * item.price
+        });
+        saveSales();
+      }
+      item.qty = act === "in" ? item.qty + amount : item.qty - amount;
+      item.qty = Math.round(item.qty * 1000) / 1000;
+      saveItems();
+      render();
+      showToast(act === "in" ? "Stock added" : "Sale saved");
+    } else if (act === "edit") {
+      openForm(item);
+    } else if (act === "delete") {
+      if (confirm("Delete " + item.name + "?")) {
+        items = items.filter(function (i) { return String(i.id) !== id; });
+        saveItems();
+        render();
+        showToast("Product deleted");
+      }
+    }
+  });
+
+  document.getElementById("search").addEventListener("input", render);
+  document.getElementById("filter").addEventListener("change", render);
+
+  // ----- Sales list -----
+  function renderSales() {
+    var range = document.getElementById("salesRange").value;
+    var today = new Date().toDateString();
+    var list = document.getElementById("salesList");
+
+    var shown = sales.filter(function (sale) {
+      return range === "all" || new Date(sale.date).toDateString() === today;
+    }).slice().reverse();
+
+    var total = 0;
+    shown.forEach(function (sale) { total += sale.total; });
+    document.getElementById("salesTotal").textContent = money(total);
+    document.getElementById("salesCount").textContent = shown.length;
+
+    if (shown.length === 0) {
+      list.innerHTML = '<div class="empty">No sales yet. Tap "Sell" on a product in the Stock tab.</div>';
+      return;
+    }
+
+    list.innerHTML = shown.map(function (sale) {
+      return (
+        '<article class="sale">' +
+          '<div>' +
+            '<b>' + escapeHtml(sale.name) + '</b>' +
+            '<small>' + sale.amount + ' ' + escapeHtml(sale.unit) + ' at ' + money(sale.price) + '</small>' +
+            '<small>' + new Date(sale.date).toLocaleString() + '</small>' +
+          '</div>' +
+          '<div class="amount">' + money(sale.total) + '</div>' +
+        '</article>'
+      );
+    }).join("");
+  }
+
+  // ----- Tabs -----
+  function showTab(name) {
+    var isSales = name === "sales";
+    document.getElementById("stockView").hidden = isSales;
+    document.getElementById("salesView").hidden = !isSales;
+    document.getElementById("tabStock").classList.toggle("active", !isSales);
+    document.getElementById("tabSales").classList.toggle("active", isSales);
+    if (isSales) renderSales();
+  }
+
+  document.getElementById("tabStock").addEventListener("click", function () { showTab("stock"); });
+  document.getElementById("tabSales").addEventListener("click", function () { showTab("sales"); });
+  document.getElementById("salesRange").addEventListener("change", renderSales);
+
+  // ----- Print and clear -----
+  document.getElementById("printBtn").addEventListener("click", function () { window.print(); });
+  document.getElementById("printSalesBtn").addEventListener("click", function () { window.print(); });
+
+  document.getElementById("clearSalesBtn").addEventListener("click", function () {
+    if (sales.length === 0) {
+      showToast("There are no sales to clear");
+      return;
+    }
+    if (confirm("Delete ALL sales records? This cannot be undone.")) {
+      sales = [];
+      saveSales();
+      renderSales();
+      showToast("Sales cleared");
+    }
+  });
+
+  // ----- Start -----
+  loadItems();
+  loadSales();
+  render();
+
+</script>
+</body>
+</html>
